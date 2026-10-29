@@ -22,8 +22,9 @@ Pasos:
 2. Ejecuta `INSTALAR.bat`.
 3. Abre `VirtualDeviceManager\PSMSVirtualDeviceManager.exe`.
 4. **Virtual Motion Tracker → Management → Install Drivers**.
-5. En **Virtual Trackers** añade tu webcam, pon **Virtual tracker count = 1**
-   y marca **Autostart**.
+5. En **Virtual Trackers** añade tu webcam y marca **Autostart**. El
+   **Virtual tracker count** se ajusta solo (el VDM lo sube a los slots que
+   necesitan tus cámaras).
 6. Arranca PSMoveServiceEx desde el VDM y después SteamVR.
 
 No hace falta un segundo repositorio: el paquete y la release salen de este
@@ -215,13 +216,17 @@ El VDM puede usar una webcam normal como tracker virtual: captura la imagen y
 la envía a PSMoveServiceEx por un *named pipe*. Para que el config tool lo
 liste hay que tener en cuenta tres cosas:
 
-1. **Slots virtuales en el servicio.** El servicio solo crea el tracker si
-   `virtual_tracker_count` es mayor que 0. Se cambia en el VDM en
-   **Virtual Trackers → Virtual tracker count** (escribe
-   `%APPDATA%\PSMoveService\TrackerManagerConfig.json`) o en el config tool en
-   **Advanced Settings**. Hay que reiniciar el servicio. Con el valor `0`
-   (por defecto) el config tool no muestra ningún tracker virtual aunque la
-   webcam esté añadida en el VDM.
+1. **Slots virtuales en el servicio.** El servicio solo crea un tracker
+   virtual si `virtual_tracker_count` es mayor que 0. El VDM lo ajusta solo:
+   al abrir la página **Virtual Trackers** y al añadir una cámara lo sube a los
+   slots que necesitan tus dispositivos (dos por cada cámara de PS4) y, si el
+   servicio ya estaba arrancado, te ofrece reiniciarlo. Además, al lanzar el
+   servicio le pasa `--min_virtual_tracker`, que cubre el caso de una
+   instalación nueva en la que
+   `%APPDATA%\PSMoveService\TrackerManagerConfig.json` todavía no existe.
+   Nunca lo baja solo, porque los dispositivos con `Autostart=False` no se
+   restauran al arrancar. También se puede fijar a mano en el combo o en el
+   config tool (**Advanced Settings**).
 2. **Tracker id.** En el VDM cada webcam se asigna a un *tracker id*. Los
    trackers virtuales se enumeran antes que las cámaras reales, así que con un
    slot virtual la PS3 Eye pasa a ser el tracker 1. El valor guardado en
