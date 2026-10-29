@@ -1,0 +1,224 @@
+{
+	"bindings":
+	{
+		"/actions/legacy":
+		{
+			"haptics":
+			[
+				{
+					"output": "/actions/legacy/out/left_haptic",
+					"path": "/user/hand/left/output/haptic"
+				},
+				{
+					"output": "/actions/legacy/out/right_haptic",
+					"path": "/user/hand/right/output/haptic"
+				}
+			],
+			"poses":
+			[
+				{
+					"output": "/actions/legacy/in/Left_Pose",
+					"path": "/user/hand/left/pose/raw"
+				},
+				{
+					"output": "/actions/legacy/in/Right_Pose",
+					"path": "/user/hand/right/pose/raw"
+				}
+			],
+			"sources":
+			[
+				{
+					"inputs":
+					{
+						"pull":
+						{
+							"output": "/actions/legacy/in/left_axis1_value"
+						},
+						"click":
+						{
+							"output": "/actions/legacy/in/left_axis1_press"
+						}
+					},
+					"mode": "trigger",
+					"path": "/user/hand/left/input/trigger"
+				},
+				{
+					"inputs":
+					{
+						"pull":
+						{
+							"output": "/actions/legacy/in/right_axis1_value"
+						},
+						"click":
+						{
+							"output": "/actions/legacy/in/right_axis1_press"
+						}
+					},
+					"mode": "trigger",
+					"path": "/user/hand/right/input/trigger"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/left_grip_press"
+						}
+					},
+					"mode": "button",
+					"parameters":
+					{
+						"click_activate_threshold": "0.8",
+						"force_input": "force"
+					},
+					"path": "/user/hand/left/input/grip"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/right_grip_press"
+						}
+					},
+					"mode": "button",
+					"parameters":
+					{
+						"click_activate_threshold": "0.8",
+						"force_input": "force"
+					},
+					"path": "/user/hand/right/input/grip"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/left_axis0_press"
+						},
+						"position":
+						{
+							"output": "/actions/legacy/in/left_axis0_value"
+						}
+					},
+					"mode": "joystick",
+					"path": "/user/hand/left/input/thumbstick"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/right_axis0_press"
+						},
+						"position":
+						{
+							"output": "/actions/legacy/in/right_axis0_value"
+						}
+					},
+					"mode": "joystick",
+					"path": "/user/hand/right/input/thumbstick"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/left_axis2_press"
+						},
+						"position":
+						{
+							"output": "/actions/legacy/in/left_axis2_value"
+						}
+					},
+					"mode": "joystick",
+					"path": "/user/hand/left/input/thumbstick2"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/right_axis2_press"
+						},
+						"position":
+						{
+							"output": "/actions/legacy/in/right_axis2_value"
+						}
+					},
+					"mode": "joystick",
+					"path": "/user/hand/right/input/thumbstick2"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/left_system_press"
+						}
+					},
+					"mode": "button",
+					"path": "/user/hand/left/input/system"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/right_system_press"
+						}
+					},
+					"mode": "button",
+					"path": "/user/hand/right/input/system"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/left_applicationmenu_press"
+						}
+					},
+					"mode": "button",
+					"path": "/user/hand/left/input/application_menu"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/right_applicationmenu_press"
+						}
+					},
+					"mode": "button",
+					"path": "/user/hand/right/input/application_menu"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/left_a_press"
+						}
+					},
+					"mode": "button",
+					"path": "/user/hand/left/input/a"
+				},
+				{
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/legacy/in/right_a_press"
+						}
+					},
+					"mode": "button",
+					"path": "/user/hand/right/input/a"
+				}
+			]
+		}
+	},
+	"controller_type": "psmove_ds4",
+	"description": "Mapeo por defecto de los DualShock 4 de PSMoveServiceEx para aplicaciones legacy",
+	"name": "PSMoveServiceEx DualShock 4 Legacy Bindings"
+}

@@ -11,4 +11,12 @@
     Public Const VMT_DRIVER_NAME As String = "psmsex"
     Public Const VMT_DRIVER_ROOT_PATH As String = "driver\psmsex"
     Public Const VMT_DRIVER_FILE As String = "driver_psmsex.dll"
+
+    ' DualShock 4 6DOF driver bundled with the manager. It is a separate SteamVR
+    ' driver because it talks to PSMoveServiceEx directly (controller pose,
+    ' thumbsticks, recenter button and light bar/rumble), while psmsex only
+    ' publishes virtual motion trackers.
+    Public Const PSM_DRIVER_NAME As String = "psmoveserviceex"
+    Public Const PSM_DRIVER_ROOT_PATH As String = "driver\psmoveserviceex"
+    Public Const PSM_DRIVER_FILE As String = "driver_psmoveserviceex.dll"
 End Class

@@ -1,0 +1,24 @@
+[
+  {
+    "language_tag": "en_US",
+    "psmove_ds4": "DualShock 4",
+    "psmoveserviceex": "PSMoveServiceEx",
+    "/input/trigger": "R2 Trigger",
+    "/input/grip": "L2 Trigger",
+    "/input/thumbstick": "Left Thumbstick",
+    "/input/thumbstick2": "Right Thumbstick",
+    "/input/trackpad": "Touchpad Click",
+    "/input/a": "Cross",
+    "/input/b": "Circle",
+    "/input/x": "Square",
+    "/input/y": "Triangle",
+    "/input/shoulder": "L1 / R1",
+    "/input/system": "PS Button",
+    "/input/application_menu": "Options",
+    "/input/dpad_up": "D-pad Up",
+    "/input/dpad_down": "D-pad Down",
+    "/input/dpad_left": "D-pad Left",
+    "/input/dpad_right": "D-pad Right",
+    "/output/haptic": "Rumble"
+  }
+]

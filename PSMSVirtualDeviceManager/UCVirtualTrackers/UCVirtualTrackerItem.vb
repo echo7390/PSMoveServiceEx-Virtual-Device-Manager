@@ -2246,8 +2246,19 @@ Public Class UCVirtualTrackerItem
                     Try
                         Dim iPipeIndex As Integer = m_PipePrimaryIndex
 
+                        ' Tracker disabled. Just idle instead of flooding the error log.
                         If (iPipeIndex < 0) Then
-                            Throw New ArgumentException("Invalid pipe index.")
+                            Threading.Thread.Sleep(1000)
+                            Continue While
+                        End If
+
+                        ' Never connect while PSMoveServiceEx is still booting up. Sending frames to a
+                        ' virtual tracker pipe before the service finished opening all of its devices
+                        ' makes the service crash with a heap corruption.
+                        Dim mCAPI = g_mUCVirtualTrackerItem.g_mUCVirtualTrackers.g_mFormMain.g_mPSMoveServiceCAPI
+                        If (mCAPI Is Nothing OrElse Not mCAPI.m_IsServiceConnected OrElse mCAPI.m_TrackerData(iPipeIndex) Is Nothing) Then
+                            Threading.Thread.Sleep(1000)
+                            Continue While
                         End If
 
                         Dim sPipeName As String = String.Format("PSMoveSerivceEx\VirtPSeyeStream{0}_{1}", CInt(m_CaptureResolution(iPipeID)), iPipeIndex + iPipeID)

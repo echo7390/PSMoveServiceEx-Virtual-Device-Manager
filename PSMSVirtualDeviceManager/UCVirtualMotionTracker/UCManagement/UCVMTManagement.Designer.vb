@@ -357,7 +357,7 @@ Partial Class UCVmtManagement
         Me.LinkLabel_DriverInstall.Size = New System.Drawing.Size(71, 13)
         Me.LinkLabel_DriverInstall.TabIndex = 17
         Me.LinkLabel_DriverInstall.TabStop = True
-        Me.LinkLabel_DriverInstall.Text = "Install Driver"
+        Me.LinkLabel_DriverInstall.Text = "Install Drivers"
         Me.LinkLabel_DriverInstall.VisitedLinkColor = System.Drawing.Color.RoyalBlue
         '
         'LinkLabel_DriverUninstall
@@ -373,7 +373,7 @@ Partial Class UCVmtManagement
         Me.LinkLabel_DriverUninstall.Size = New System.Drawing.Size(86, 13)
         Me.LinkLabel_DriverUninstall.TabIndex = 11
         Me.LinkLabel_DriverUninstall.TabStop = True
-        Me.LinkLabel_DriverUninstall.Text = "Uninstall Driver"
+        Me.LinkLabel_DriverUninstall.Text = "Uninstall Drivers"
         Me.LinkLabel_DriverUninstall.VisitedLinkColor = System.Drawing.Color.RoyalBlue
         '
         'Panel12

@@ -106,6 +106,23 @@ Public Class ClassOpenVRConfig
         Return mDrivers.ToArray
     End Function
 
+    Public Function GetRuntimePath() As String
+        If (Not g_bConfigLoaded) Then
+            Return Nothing
+        End If
+
+        If (Not g_mConfig.ContainsKey("runtime")) Then
+            Return Nothing
+        End If
+
+        Dim mRuntime = TryCast(g_mConfig("runtime"), ArrayList)
+        If (mRuntime Is Nothing OrElse mRuntime.Count < 1) Then
+            Return Nothing
+        End If
+
+        Return CStr(mRuntime(0))
+    End Function
+
     Public Function LoadConfig(Optional bSafeRead As Boolean = True) As Boolean
         Dim sOpenVRPath As String = m_OpenVRPath
         If (sOpenVRPath Is Nothing) Then

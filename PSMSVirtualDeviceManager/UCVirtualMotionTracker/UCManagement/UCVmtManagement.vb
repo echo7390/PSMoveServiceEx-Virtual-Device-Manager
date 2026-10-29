@@ -95,33 +95,63 @@ Public Class UCVmtManagement
                 Throw New ArgumentException("SteamVR is running! Close SteamVR and try again.")
             End If
 
-            Dim sDriverRoot As String = IO.Path.Combine(IO.Path.GetDirectoryName(Application.ExecutablePath), ClassVmtConst.VMT_DRIVER_ROOT_PATH)
-            If (Not IO.Directory.Exists(sDriverRoot)) Then
-                Throw New ArgumentException("Could not find driver root folder!")
-            End If
+            Dim sAppDir As String = IO.Path.GetDirectoryName(Application.ExecutablePath)
+            Dim mDriverRoots As New List(Of KeyValuePair(Of String, String))
+            mDriverRoots.Add(New KeyValuePair(Of String, String)(ClassVmtConst.VMT_DRIVER_NAME, ClassVmtConst.VMT_DRIVER_ROOT_PATH))
+            mDriverRoots.Add(New KeyValuePair(Of String, String)(ClassVmtConst.PSM_DRIVER_NAME, ClassVmtConst.PSM_DRIVER_ROOT_PATH))
 
-            Dim sDriverDLL As String = IO.Path.Combine(IO.Path.Combine(sDriverRoot, "bin\win64"), ClassVmtConst.VMT_DRIVER_FILE)
-            If (Not IO.File.Exists(sDriverDLL)) Then
-                Throw New ArgumentException(String.Format("Could not find driver '{0}'!", ClassVmtConst.VMT_DRIVER_FILE))
-            End If
+            ' Validate every bundled driver before touching the OpenVR config.
+            For Each mDriverRoot In mDriverRoots
+                Dim sDriverRoot As String = IO.Path.Combine(sAppDir, mDriverRoot.Value)
+                If (Not IO.Directory.Exists(sDriverRoot)) Then
+                    Throw New ArgumentException(String.Format("Could not find the '{0}' driver root folder!", mDriverRoot.Key))
+                End If
+
+                Dim sDriverDLL As String = IO.Path.Combine(IO.Path.Combine(sDriverRoot, "bin\win64"), String.Format("driver_{0}.dll", mDriverRoot.Key))
+                If (Not IO.File.Exists(sDriverDLL)) Then
+                    Throw New ArgumentException(String.Format("Could not find driver '{0}'!", sDriverDLL))
+                End If
+            Next
 
             Dim mConfig As New ClassOpenVRConfig()
             If (Not mConfig.LoadConfig()) Then
                 Throw New ArgumentException("Unable to find and load OpenVR config!")
             End If
 
-            ' Find outdated drivers
-            If (True) Then
-                Dim mDrivers = mConfig.GetDrivers()
-                For Each mDriver In mDrivers
+            Dim sSteamVRRoot As String = mConfig.GetRuntimePath()
+            Dim sReport As New Text.StringBuilder
+
+            For Each mDriverRoot In mDriverRoots
+                Dim sDriverRoot As String = IO.Path.GetFullPath(IO.Path.Combine(sAppDir, mDriverRoot.Value))
+
+                ' A copy inside <SteamVR>\drivers is loaded automatically by SteamVR.
+                ' Registering our copy as well would load the same driver twice.
+                If (Not String.IsNullOrEmpty(sSteamVRRoot)) Then
+                    Dim sSteamVRDriverRoot As String = IO.Path.Combine(sSteamVRRoot, "drivers", mDriverRoot.Key)
+                    If (IO.Directory.Exists(sSteamVRDriverRoot)) Then
+                        Dim sBundledDLL As String = IO.Path.Combine(IO.Path.Combine(sDriverRoot, "bin\win64"), String.Format("driver_{0}.dll", mDriverRoot.Key))
+                        Dim sInstalledDLL As String = IO.Path.Combine(IO.Path.Combine(sSteamVRDriverRoot, "bin\win64"), String.Format("driver_{0}.dll", mDriverRoot.Key))
+
+                        If (IO.File.Exists(sInstalledDLL) AndAlso IO.File.GetLastWriteTimeUtc(sInstalledDLL) < IO.File.GetLastWriteTimeUtc(sBundledDLL)) Then
+                            sReport.AppendLine(String.Format("{0}: already installed in SteamVR\drivers, but it is older than the bundled copy", mDriverRoot.Key))
+                        Else
+                            sReport.AppendLine(String.Format("{0}: already installed in SteamVR\drivers", mDriverRoot.Key))
+                        End If
+
+                        Continue For
+                    End If
+                End If
+
+                ' Find outdated copies of the same driver registered from another folder.
+                For Each mDriver In mConfig.GetDrivers()
                     Dim sDriverPath As String = IO.Path.GetFullPath(mDriver.sDriverPath)
                     If (sDriverPath.ToLowerInvariant = sDriverRoot.ToLowerInvariant) Then
                         Continue For
                     End If
 
-                    If (sDriverPath.ToLowerInvariant.EndsWith(String.Format("\{0}", ClassVmtConst.VMT_DRIVER_NAME.ToLowerInvariant))) Then
+                    If (sDriverPath.ToLowerInvariant.EndsWith(String.Format("\{0}", mDriverRoot.Key.ToLowerInvariant))) Then
                         Dim sMsg As New Text.StringBuilder
-                        sMsg.AppendLine("Another version of the SteamVR driver is already installed!")
+                        sMsg.AppendLine(String.Format("Another version of the '{0}' SteamVR driver is already installed!", mDriverRoot.Key))
                         sMsg.AppendLine("Do you want to remove the following outdated driver?")
                         sMsg.AppendLine()
                         sMsg.AppendLine(sDriverPath)
@@ -131,23 +161,26 @@ Public Class UCVmtManagement
                         End If
                     End If
                 Next
-            End If
 
-            ' Find same driver
-            If (True) Then
+                ' Register the bundled copy unless it is already registered.
+                Dim bRegistered As Boolean = False
                 For Each mDriver In mConfig.GetDrivers()
-                    Dim sDriverPath As String = IO.Path.GetFullPath(mDriver.sDriverPath)
-                    If (sDriverPath.ToLowerInvariant = sDriverRoot.ToLowerInvariant) Then
-                        MessageBox.Show("SteamVR driver is already installed!", "Unable to install driver", MessageBoxButtons.OK, MessageBoxIcon.Information)
-                        Return
+                    If (IO.Path.GetFullPath(mDriver.sDriverPath).ToLowerInvariant = sDriverRoot.ToLowerInvariant) Then
+                        bRegistered = True
+                        Exit For
                     End If
                 Next
-            End If
 
-            mConfig.AddPath(sDriverRoot)
-            mConfig.SaveConfig()
+                If (bRegistered) Then
+                    sReport.AppendLine(String.Format("{0}: already registered", mDriverRoot.Key))
+                Else
+                    mConfig.AddPath(sDriverRoot)
+                    mConfig.SaveConfig()
+                    sReport.AppendLine(String.Format("{0}: registered", mDriverRoot.Key))
+                End If
+            Next
 
-            MessageBox.Show("Driver has been successfully registered!", "Driver added to SteamVR", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show(sReport.ToString, "SteamVR drivers", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             ClassAdvancedExceptionLogging.WriteToLogMessageBox(ex)
         End Try
@@ -159,17 +192,38 @@ Public Class UCVmtManagement
                 Throw New ArgumentException("SteamVR is running! Close SteamVR and try again.")
             End If
 
-            Dim sDriverRoot As String = IO.Path.Combine(IO.Path.GetDirectoryName(Application.ExecutablePath), ClassVmtConst.VMT_DRIVER_ROOT_PATH)
+            Dim sAppDir As String = IO.Path.GetDirectoryName(Application.ExecutablePath)
+            Dim mDriverRoots As New List(Of KeyValuePair(Of String, String))
+            mDriverRoots.Add(New KeyValuePair(Of String, String)(ClassVmtConst.VMT_DRIVER_NAME, ClassVmtConst.VMT_DRIVER_ROOT_PATH))
+            mDriverRoots.Add(New KeyValuePair(Of String, String)(ClassVmtConst.PSM_DRIVER_NAME, ClassVmtConst.PSM_DRIVER_ROOT_PATH))
 
             Dim mConfig As New ClassOpenVRConfig()
             If (Not mConfig.LoadConfig()) Then
                 Throw New ArgumentException("Unable to find and load OpenVR config!")
             End If
 
-            mConfig.RemovePath(sDriverRoot)
+            Dim sSteamVRRoot As String = mConfig.GetRuntimePath()
+            Dim sReport As New Text.StringBuilder
+
+            For Each mDriverRoot In mDriverRoots
+                Dim sDriverRoot As String = IO.Path.GetFullPath(IO.Path.Combine(sAppDir, mDriverRoot.Value))
+                mConfig.RemovePath(sDriverRoot)
+
+                Dim bSteamVRCopy As Boolean = False
+                If (Not String.IsNullOrEmpty(sSteamVRRoot)) Then
+                    bSteamVRCopy = IO.Directory.Exists(IO.Path.Combine(sSteamVRRoot, "drivers", mDriverRoot.Key))
+                End If
+
+                If (bSteamVRCopy) Then
+                    sReport.AppendLine(String.Format("{0}: unregistered (a copy is still present in SteamVR\drivers)", mDriverRoot.Key))
+                Else
+                    sReport.AppendLine(String.Format("{0}: unregistered", mDriverRoot.Key))
+                End If
+            Next
+
             mConfig.SaveConfig()
 
-            MessageBox.Show("Driver has been successfully unregistered!", "Driver removed from SteamVR", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show(sReport.ToString, "SteamVR drivers", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             ClassAdvancedExceptionLogging.WriteToLogMessageBox(ex)
         End Try

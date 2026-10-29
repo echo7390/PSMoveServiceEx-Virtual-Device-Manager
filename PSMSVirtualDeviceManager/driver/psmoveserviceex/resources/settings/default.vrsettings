@@ -1,0 +1,10 @@
+{
+	"driver_psmoveserviceex":
+	{
+		"host": "localhost",
+		"port": "9512",
+		"yaw_offset_degrees": 0.0,
+		"hand": "auto",
+		"verbose_logging": false
+	}
+}
