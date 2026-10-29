@@ -61,6 +61,26 @@
         Finally
             g_bIgnoreEvents = False
         End Try
+
+        Try
+            ' Give the service a slot for every configured video input device.
+            If (EnsureVirtualTrackerSlotCount()) Then
+                PromptRestartServiceForNewSlots()
+            End If
+        Catch ex As Exception
+            ClassAdvancedExceptionLogging.WriteToLogMessageBox(ex)
+        End Try
+    End Sub
+
+    Private Sub PromptRestartServiceForNewSlots()
+        ' During startup the service is usually not running yet (the user starts it
+        ' from the VDM), so it will pick the new slot count up on its own. Only ask
+        ' for a restart when the window is already up and the service may be live.
+        If (g_mFormMain Is Nothing OrElse Not g_mFormMain.Visible) Then
+            Return
+        End If
+
+        g_mFormMain.PromptRestartPSMoveService()
     End Sub
 
     Private Sub OpenWindowsPrivacySettings()
@@ -236,6 +256,99 @@
 #End Region
     End Class
 
+    ' The service only creates as many virtual tracker slots as
+    ' 'virtual_tracker_count' says. When that number is lower than the amount of
+    ' video input devices the user has configured, the extra devices have no slot
+    ' (and no pipe) to connect to, which surfaces as "Virtual tracker not connected
+    ' to PSMoveServiceEx" even though everything else is fine.
+    '
+    ' A fresh installation starts with 0 slots, so without this the first added
+    ' camera never works until the user finds the slot count dropdown.
+    '
+    ' The count is only ever raised: lowering it could break setups whose devices
+    ' are not restored at startup (Autostart disabled).
+    '
+    ' Returns True when the configuration was changed, in which case the service
+    ' has to be restarted before the new slots exist.
+    Public Function EnsureVirtualTrackerSlotCount() As Boolean
+        Try
+            Dim iRequiredCount As Integer = 0
+            Dim iDeviceSlotSum As Integer = 0
+            Dim bAnyIndexResolved As Boolean = False
+
+            For Each mItem As ListViewItem In ListView_VideoDevices.Items
+                Dim mTrackerItem = TryCast(mItem, ClassVideoInputDevicesListViewItem)
+                If (mTrackerItem Is Nothing) Then
+                    Continue For
+                End If
+
+                Dim bIsPlayStationCamera As Boolean = IsPlayStation4Camera(mTrackerItem.m_ClassDeviceInfo)
+                Dim iSlots As Integer = If(bIsPlayStationCamera, 2, 1)
+                iDeviceSlotSum += iSlots
+
+                Dim mCaptureLogic As UCVirtualTrackerItem.ClassCaptureLogic = Nothing
+                If (mTrackerItem.m_UCVirtualMotionTrackerItem IsNot Nothing) Then
+                    mCaptureLogic = mTrackerItem.m_UCVirtualMotionTrackerItem.g_mClassCaptureLogic
+                End If
+
+                If (mCaptureLogic IsNot Nothing AndAlso mCaptureLogic.m_PipePrimaryIndex >= 0) Then
+                    bAnyIndexResolved = True
+                    iRequiredCount = Math.Max(iRequiredCount, mCaptureLogic.m_PipePrimaryIndex + iSlots)
+                End If
+            Next
+
+            ' Trackers whose id is not resolved yet are assumed to be packed from 0.
+            If (Not bAnyIndexResolved) Then
+                iRequiredCount = iDeviceSlotSum
+            End If
+
+            If (iRequiredCount <= 0) Then
+                Return False
+            End If
+
+            Dim mConfig As New ClassServiceConfig(GetConfig())
+            mConfig.LoadConfig()
+
+            Dim iCurrentCount As Integer = mConfig.GetValue(Of Integer)("", "virtual_tracker_count", 0)
+            If (iCurrentCount >= iRequiredCount) Then
+                Return False
+            End If
+
+            mConfig.SetValue("", "virtual_tracker_count", iRequiredCount)
+            mConfig.SaveConfig()
+
+            ' Keep the dropdown in sync without writing the config back
+            Try
+                g_bIgnoreEvents = True
+                ClassMathUtils.SetComboBoxSelectedIndexClamp(ComboBox_VirtualTrackerCount, iRequiredCount)
+            Finally
+                g_bIgnoreEvents = False
+            End Try
+
+            Return True
+        Catch ex As Exception
+            ClassAdvancedExceptionLogging.WriteToLog(ex)
+            Return False
+        End Try
+    End Function
+
+    Private Shared Function IsPlayStation4Camera(mDeviceInfo As ClassVideoInputDevices.ClassDeviceInfo) As Boolean
+        If (mDeviceInfo Is Nothing OrElse String.IsNullOrEmpty(mDeviceInfo.m_Path)) Then
+            Return False
+        End If
+
+        Dim sPath As String = mDeviceInfo.m_Path.ToLowerInvariant()
+
+        For Each mKnownDevice In ClassLibusbDriver.DRV_PS4CAM_KNOWN_CONFIGS
+            Dim sHardwareId As String = String.Format("\USB#VID_{0}&PID_{1}", mKnownDevice.VID, mKnownDevice.PID).ToLowerInvariant()
+            If (sPath.Contains(sHardwareId)) Then
+                Return True
+            End If
+        Next
+
+        Return False
+    End Function
+
     Private Sub ComboBox_VirtualTrackerCount_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox_VirtualTrackerCount.SelectedIndexChanged
         If (g_bIgnoreEvents) Then
             Return
@@ -355,6 +468,12 @@
         Dim mItem = New ClassVideoInputDevicesListViewItem(Me, mDeviceInfo)
         ListView_VideoDevices.Items.Add(mItem)
         mItem.Selected = True
+
+        ' A slot has to exist in the service before this device can stream to it,
+        ' otherwise the tracker reports "not connected to PSMoveServiceEx".
+        If (EnsureVirtualTrackerSlotCount()) Then
+            PromptRestartServiceForNewSlots()
+        End If
     End Sub
 
     Public Function GetAllDevices() As UCVirtualTrackerItem()
