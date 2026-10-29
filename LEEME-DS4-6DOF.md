@@ -7,6 +7,30 @@ servicio que ya estaban probados en el proyecto `PSMoveServiceEx`.
 
 ---
 
+## 0. Instalación rápida (paquete ya compilado)
+
+En la sección **Releases** de este repositorio está el paquete
+`PSMoveServiceEx-DS4-13.14.9.zip`, que ya incluye todo lo necesario:
+
+- `VirtualDeviceManager\` — el VDM con el driver `psmoveserviceex` dentro.
+- `PSMoveService\` — el servicio y el config tool (0.27.8.0 con soporte DS4).
+- `INSTALAR.bat` — escribe la ruta del servicio en `settings.ini`.
+
+Pasos:
+
+1. Descomprime el zip donde quieras (por ejemplo `C:\PSMoveServiceEx-DS4`).
+2. Ejecuta `INSTALAR.bat`.
+3. Abre `VirtualDeviceManager\PSMSVirtualDeviceManager.exe`.
+4. **Virtual Motion Tracker → Management → Install Drivers**.
+5. En **Virtual Trackers** añade tu webcam, pon **Virtual tracker count = 1**
+   y marca **Autostart**.
+6. Arranca PSMoveServiceEx desde el VDM y después SteamVR.
+
+No hace falta un segundo repositorio: el paquete y la release salen de este
+mismo proyecto.
+
+---
+
 ## 1. Qué se ha añadido
 
 ### 1.1. El driver de SteamVR (nuevo)

@@ -38,3 +38,6 @@ the `psmsex` virtual motion tracker driver.
 
 See [LEEME-DS4-6DOF.md](LEEME-DS4-6DOF.md) (Spanish) for installation,
 controls and troubleshooting.
+
+The ready-to-run package (VDM + service + installer, no build required) is
+published in the [Releases](../../releases) section.
