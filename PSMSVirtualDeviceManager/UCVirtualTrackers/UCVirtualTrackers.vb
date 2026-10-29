@@ -268,9 +268,11 @@
     ' The count is only ever raised: lowering it could break setups whose devices
     ' are not restored at startup (Autostart disabled).
     '
-    ' Returns True when the configuration was changed, in which case the service
-    ' has to be restarted before the new slots exist.
-    Public Function EnsureVirtualTrackerSlotCount() As Boolean
+    ' Returns the amount of virtual tracker slots the configured video input
+    ' devices need. The service places the virtual slots after the physical
+    ' trackers, so what matters is that every tracker id a device streams to
+    ' exists: 'tracker id + slots in that device'.
+    Public Function GetRequiredVirtualTrackerSlotCount() As Integer
         Try
             Dim iRequiredCount As Integer = 0
             Dim iDeviceSlotSum As Integer = 0
@@ -302,12 +304,41 @@
                 iRequiredCount = iDeviceSlotSum
             End If
 
+            Return Math.Max(0, Math.Min(ClassSerivceConst.PSMOVESERVICE_MAX_TRACKER_COUNT, iRequiredCount))
+        Catch ex As Exception
+            ClassAdvancedExceptionLogging.WriteToLog(ex)
+            Return 0
+        End Try
+    End Function
+
+    ' Returns True when the configuration was changed, in which case the service
+    ' has to be restarted before the new slots exist.
+    Public Function EnsureVirtualTrackerSlotCount() As Boolean
+        Try
+            Dim iRequiredCount As Integer = GetRequiredVirtualTrackerSlotCount()
             If (iRequiredCount <= 0) Then
                 Return False
             End If
 
-            Dim mConfig As New ClassServiceConfig(GetConfig())
-            mConfig.LoadConfig()
+            ' Never create the service config from scratch: TrackerManagerConfig
+            ' is only accepted by the service when it carries the expected
+            ' 'version', so a file containing just this one key would be thrown
+            ' away together with every other setting. When the service has not
+            ' written its config yet, the slot count is passed on the command
+            ' line instead (see UCStartPage.RunService).
+            Dim sConfigPath As String = GetConfig()
+            If (String.IsNullOrEmpty(sConfigPath) OrElse Not IO.File.Exists(sConfigPath)) Then
+                Return False
+            End If
+
+            Dim mConfig As New ClassServiceConfig(sConfigPath)
+            If (Not mConfig.LoadConfig()) Then
+                Return False
+            End If
+
+            If (Not mConfig.ContainsKey("", "version")) Then
+                Return False
+            End If
 
             Dim iCurrentCount As Integer = mConfig.GetValue(Of Integer)("", "virtual_tracker_count", 0)
             If (iCurrentCount >= iRequiredCount) Then

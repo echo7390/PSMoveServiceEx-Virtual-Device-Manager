@@ -956,9 +956,27 @@ Public Class UCStartPage
             End If
         End If
 
+        Dim iRequiredTrackerSlots As Integer = 0
+        If (g_FormMain IsNot Nothing AndAlso g_FormMain.g_mUCVirtualTrackers IsNot Nothing) Then
+            iRequiredTrackerSlots = g_FormMain.g_mUCVirtualTrackers.GetRequiredVirtualTrackerSlotCount()
+        End If
+
         Using mProcess As New Process
             mProcess.StartInfo.FileName = mConfig.m_FileName
             mProcess.StartInfo.WorkingDirectory = IO.Path.GetDirectoryName(mConfig.m_FileName)
+
+            ' The service only creates as many virtual tracker slots as
+            ' 'virtual_tracker_count' says. Passing the amount the configured
+            ' video input devices need covers the cases where the service config
+            ' does not exist yet or is out of date, which would otherwise leave a
+            ' camera without a slot and show "Virtual tracker not connected to
+            ' PSMoveServiceEx" until the user found the slot count dropdown.
+            ' The service raises the stored count to this minimum and saves it.
+            If (iRequiredTrackerSlots > 0) Then
+                mProcess.StartInfo.Arguments =
+                    String.Format("--min_virtual_tracker {0}", iRequiredTrackerSlots)
+            End If
+
             mProcess.StartInfo.UseShellExecute = False
             mProcess.StartInfo.CreateNoWindow = bHidden
 

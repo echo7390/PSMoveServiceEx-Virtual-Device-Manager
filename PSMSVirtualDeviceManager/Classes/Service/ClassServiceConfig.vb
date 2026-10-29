@@ -35,6 +35,29 @@ Public Class ClassServiceConfig
         mScansDic(sKey) = mValue
     End Sub
 
+    Public Function ContainsKey(sPath As String, sKey As String) As Boolean
+        Dim sKeys As String() = sPath.Split("\"c, "/"c)
+
+        Dim mScansDic As Dictionary(Of String, Object) = g_mConfig
+
+        For Each sPathKey In sKeys
+            If (String.IsNullOrEmpty(sPathKey)) Then
+                Exit For
+            End If
+
+            If (Not mScansDic.ContainsKey(sPathKey)) Then
+                Return False
+            End If
+
+            mScansDic = TryCast(mScansDic(sPathKey), Dictionary(Of String, Object))
+            If (mScansDic Is Nothing) Then
+                Return False
+            End If
+        Next
+
+        Return mScansDic.ContainsKey(sKey)
+    End Function
+
     Public Function GetValue(Of T)(sPath As String, sKey As String, Optional mDefaultValue As T = Nothing) As T
         Dim sKeys As String() = sPath.Split("\"c, "/"c)
 
