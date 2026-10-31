@@ -295,7 +295,6 @@
     Public Function GetRequiredVirtualTrackerSlotCount() As Integer
         Try
             Dim iRequiredCount As Integer = 0
-            Dim iDeviceSlotSum As Integer = 0
             Dim bAnyIndexResolved As Boolean = False
 
             For Each mItem As ListViewItem In ListView_VideoDevices.Items
@@ -306,7 +305,6 @@
 
                 Dim bIsPlayStationCamera As Boolean = IsPlayStation4Camera(mTrackerItem.m_ClassDeviceInfo)
                 Dim iSlots As Integer = If(bIsPlayStationCamera, 2, 1)
-                iDeviceSlotSum += iSlots
 
                 Dim mCaptureLogic As UCVirtualTrackerItem.ClassCaptureLogic = Nothing
                 If (mTrackerItem.m_UCVirtualMotionTrackerItem IsNot Nothing) Then
@@ -319,9 +317,25 @@
                 End If
             Next
 
-            ' Trackers whose id is not resolved yet are assumed to be packed from 0.
+            ' Devices whose tracker id is not resolved yet (the capture logic is
+            ' still starting) are assumed to be packed from 0, but only the ones
+            ' that actually have a tracker id assigned.
             If (Not bAnyIndexResolved) Then
-                iRequiredCount = iDeviceSlotSum
+                iRequiredCount = 0
+
+                For Each mItem As ListViewItem In ListView_VideoDevices.Items
+                    Dim mTrackerItem = TryCast(mItem, ClassVideoInputDevicesListViewItem)
+                    If (mTrackerItem Is Nothing OrElse mTrackerItem.m_UCVirtualMotionTrackerItem Is Nothing) Then
+                        Continue For
+                    End If
+
+                    Dim mTrackerIdCombo As ComboBox = mTrackerItem.m_UCVirtualMotionTrackerItem.ComboBox_DeviceTrackerId
+                    If (mTrackerIdCombo Is Nothing OrElse mTrackerIdCombo.SelectedIndex <= 0) Then
+                        Continue For
+                    End If
+
+                    iRequiredCount += If(IsPlayStation4Camera(mTrackerItem.m_ClassDeviceInfo), 2, 1)
+                Next
             End If
 
             Return Math.Max(0, Math.Min(ClassSerivceConst.PSMOVESERVICE_MAX_TRACKER_COUNT, iRequiredCount))
