@@ -488,11 +488,32 @@ Public Class UCVirtualTrackerItem
                 ' Check if connected to PSMS-EX
                 If (True) Then
                     If (Not bIsConnected) Then
-                        sTitle = "Virtual tracker not connected to PSMoveServiceEx"
+                        Dim mCAPI = g_mUCVirtualTrackers.g_mFormMain.g_mPSMoveServiceCAPI
+                        Dim bServiceRunning As Boolean = (mCAPI IsNot Nothing AndAlso mCAPI.m_IsServiceConnected)
+                        Dim bTrackerSlotExists As Boolean = (bServiceRunning AndAlso mCAPI.m_TrackerData(iPipeIndexes(0)) IsNot Nothing)
 
-                        Dim sText As New Text.StringBuilder
-                        sText.AppendLine("Unable to connect to the virtual tracker in PSMoveServiceEx that corresponds to the tracker id.")
-                        sMessage = sText.ToString
+                        If (Not bServiceRunning) Then
+                            sTitle = "PSMoveServiceEx is not running"
+
+                            Dim sText As New Text.StringBuilder
+                            sText.AppendLine("Start PSMoveServiceEx to connect this virtual tracker.")
+                            sMessage = sText.ToString
+                        ElseIf (Not bTrackerSlotExists) Then
+                            sTitle = String.Format("Virtual tracker {0} does not exist in PSMoveServiceEx", iPipeIndexes(0))
+
+                            Dim sText As New Text.StringBuilder
+                            sText.AppendFormat("PSMoveServiceEx is running but it has not created a virtual tracker with id {0}.", iPipeIndexes(0))
+                            sText.AppendLine()
+                            sText.AppendFormat("Set 'Virtual Tracker Count' to at least {0} and restart PSMoveServiceEx.", (iPipeIndexes(0) + 1))
+                            sMessage = sText.ToString
+                        Else
+                            sTitle = "Virtual tracker not connected to PSMoveServiceEx"
+
+                            Dim sText As New Text.StringBuilder
+                            sText.AppendLine("Unable to connect to the virtual tracker in PSMoveServiceEx that corresponds to the tracker id.")
+                            sText.AppendLine("The service may still be starting up. This message disappears automatically once the connection is established.")
+                            sMessage = sText.ToString
+                        End If
 
                         iStatusType = 2
                         Exit While
@@ -777,6 +798,33 @@ Public Class UCVirtualTrackerItem
         g_mClassCaptureLogic.m_PipePrimaryIndex = iSelectedTrackerId_1
         g_iPreviousTrackerIdSelectedIndex = ComboBox_DeviceTrackerId.SelectedIndex
         SetUnsavedState(True)
+
+        ' The tracker id is the index of the virtual tracker inside PSMoveServiceEx.
+        ' A new id may need more virtual tracker slots, so let the parent page raise
+        ' the count and offer a service restart right away instead of waiting until
+        ' the next time the manager is opened.
+        If (iSelectedTrackerId_1 > -1) Then
+            ' Make sure the virtual tracker config of the new id exists and carries
+            ' the resolution of this video input device instead of the service default.
+            Dim bResolutionChanged As Boolean = False
+            Try
+                bResolutionChanged = SetVirtualTrackerResolutionUsingCamera(False)
+            Catch ex As Exception
+                ClassAdvancedExceptionLogging.WriteToLog(ex)
+            End Try
+
+            Try
+                If (g_mUCVirtualTrackers IsNot Nothing) Then
+                    Dim bSlotsChanged As Boolean = g_mUCVirtualTrackers.NotifyVirtualTrackerIdChanged()
+                    If (bResolutionChanged AndAlso Not bSlotsChanged) Then
+                        MessageBox.Show("Virtual tracker resolution changed! PSMoveServiceEx needs to be restarted in order for changes to take effect!", "PSMoveServiceEx restart required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                        g_mUCVirtualTrackers.g_mFormMain.PromptRestartPSMoveService()
+                    End If
+                End If
+            Catch ex As Exception
+                ClassAdvancedExceptionLogging.WriteToLog(ex)
+            End Try
+        End If
     End Sub
 
     Private Sub CheckBox_FlipHorizontal_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox_FlipHorizontal.CheckedChanged
@@ -820,7 +868,7 @@ Public Class UCVirtualTrackerItem
         End Try
     End Sub
 
-    Private Sub SetVirtualTrackerResolutionUsingCamera()
+    Private Function SetVirtualTrackerResolutionUsingCamera(Optional bShowMessage As Boolean = True) As Boolean
         Dim mIds As New List(Of Integer)
         If (g_mClassCaptureLogic.m_IsPlayStationCamera) Then
             mIds.Add(g_mClassCaptureLogic.m_PipePrimaryIndex)
@@ -873,11 +921,15 @@ Public Class UCVirtualTrackerItem
         Next
 
         If (bHadBadResolution) Then
-            MessageBox.Show("Virtual tracker resolution changed! PSMoveServiceEx needs to be restarted in order for changes to take effect!", "PSMoveServiceEx restart required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            If (bShowMessage) Then
+                MessageBox.Show("Virtual tracker resolution changed! PSMoveServiceEx needs to be restarted in order for changes to take effect!", "PSMoveServiceEx restart required", MessageBoxButtons.OK, MessageBoxIcon.Warning)
 
-            g_mUCVirtualTrackers.g_mFormMain.PromptRestartPSMoveService()
+                g_mUCVirtualTrackers.g_mFormMain.PromptRestartPSMoveService()
+            End If
         End If
-    End Sub
+
+        Return bHadBadResolution
+    End Function
 
     Private Sub ComboBox_CameraFramerate_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox_CameraFramerate.SelectedIndexChanged
         If (g_bIgnoreEvents) Then
@@ -2261,13 +2313,21 @@ Public Class UCVirtualTrackerItem
                             Continue While
                         End If
 
-                        Dim sPipeName As String = String.Format("PSMoveSerivceEx\VirtPSeyeStream{0}_{1}", CInt(m_CaptureResolution(iPipeID)), iPipeIndex + iPipeID)
+                        Dim iCaptureResolution As Integer = CInt(m_CaptureResolution(iPipeID))
+                        Dim sPipeName As String = String.Format("PSMoveSerivceEx\VirtPSeyeStream{0}_{1}", iCaptureResolution, iPipeIndex + iPipeID)
 
                         Using mPipe As New IO.Pipes.NamedPipeClientStream(".", sPipeName, IO.Pipes.PipeDirection.Out)
                             ' The thread when aborting will hang if we dont put a timeout.
                             mPipe.Connect(5000)
 
                             While True
+                                ' The tracker id or the resolution changed while this pipe
+                                ' was connected: leave the loop so the outer one reconnects
+                                ' to the pipe of the newly selected tracker.
+                                If (m_PipePrimaryIndex <> iPipeIndex OrElse CInt(m_CaptureResolution(iPipeID)) <> iCaptureResolution) Then
+                                    Exit While
+                                End If
+
                                 g_mPipEvent(iPipeID).WaitOne(New TimeSpan(0, 0, 5))
 
                                 ' Detect settings from PSMoveServiceEx

@@ -72,11 +72,31 @@
         End Try
     End Sub
 
+    ' Called when the user changes the tracker id of a video input device.
+    ' The tracker id is the index of the virtual tracker inside PSMoveServiceEx,
+    ' so a new id can need more virtual tracker slots than the service currently
+    ' creates. Raise the stored count and ask for a service restart if it changed.
+    ' Returns True when the stored virtual tracker count was raised, in which case
+    ' a restart prompt has already been shown to the user.
+    Public Function NotifyVirtualTrackerIdChanged() As Boolean
+        Try
+            If (EnsureVirtualTrackerSlotCount()) Then
+                PromptRestartServiceForNewSlots()
+                Return True
+            End If
+        Catch ex As Exception
+            ClassAdvancedExceptionLogging.WriteToLog(ex)
+        End Try
+
+        Return False
+    End Function
+
     Private Sub PromptRestartServiceForNewSlots()
         ' During startup the service is usually not running yet (the user starts it
         ' from the VDM), so it will pick the new slot count up on its own. Only ask
-        ' for a restart when the window is already up and the service may be live.
-        If (g_mFormMain Is Nothing OrElse Not g_mFormMain.Visible) Then
+        ' for a restart when the manager allows prompts (it is enabled once loading
+        ' finished); the overlay hides itself again when the process is not running.
+        If (g_mFormMain Is Nothing OrElse g_mFormMain.IsDisposed) Then
             Return
         End If
 
@@ -386,6 +406,25 @@
         End If
 
         Try
+            ' Never allow less slots than the configured video input devices use,
+            ' otherwise their tracker id would point to a tracker that does not
+            ' exist in PSMoveServiceEx and the device would stay disconnected.
+            Dim iRequiredCount As Integer = GetRequiredVirtualTrackerSlotCount()
+            If (ComboBox_VirtualTrackerCount.SelectedIndex < iRequiredCount) Then
+                g_bIgnoreEvents = True
+                Try
+                    ClassMathUtils.SetComboBoxSelectedIndexClamp(ComboBox_VirtualTrackerCount, iRequiredCount)
+                Finally
+                    g_bIgnoreEvents = False
+                End Try
+
+                MessageBox.Show(
+                    String.Format("The configured video input devices use virtual tracker id up to {0}, so at least {1} virtual trackers are required.", (iRequiredCount - 1), iRequiredCount),
+                    "Virtual tracker count too low",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning)
+            End If
+
             Dim mConfig As New ClassServiceConfig(GetConfig())
             mConfig.LoadConfig()
             mConfig.SetValue("", "virtual_tracker_count", ComboBox_VirtualTrackerCount.SelectedIndex)

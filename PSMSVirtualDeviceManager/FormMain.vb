@@ -393,6 +393,18 @@ Public Class FormMain
         End If
 
         g_bAllowRestartPrompt = True
+
+        ' The service may be running with fewer virtual tracker slots than the
+        ' configured video input devices need (for example when a tracker id was
+        ' changed while the manager was closed). Now that restart prompts are
+        ' allowed, raise the count and ask for the restart.
+        Try
+            If (g_mUCVirtualTrackers IsNot Nothing) Then
+                g_mUCVirtualTrackers.NotifyVirtualTrackerIdChanged()
+            End If
+        Catch ex As Exception
+            ClassAdvancedExceptionLogging.WriteToLog(ex)
+        End Try
     End Sub
 
     Public Sub PromptRestartPSMoveService()
