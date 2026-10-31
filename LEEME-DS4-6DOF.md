@@ -240,6 +240,23 @@ La resolución del tracker virtual (`PS3EyeTrackerConfig_virtual_0.json`,
 `640x480`) tiene que coincidir con la del VDM (**480p**), porque el nombre del
 pipe incluye la resolución.
 
+### Cambiar el tracker id
+
+Al cambiar el *tracker id* de una webcam, el VDM ahora:
+
+- comprueba en ese mismo momento cuántos slots virtuales hacen falta, sube
+  `virtual_tracker_count` y muestra el aviso de reiniciar el servicio (antes
+  solo se recalculaba al abrir el VDM o al añadir una cámara);
+- reconecta el hilo del pipe al tracker nuevo en cuanto cambia el id, sin
+  cerrar y abrir el VDM (antes seguía enviando fotogramas al pipe antiguo);
+- crea el `PS3EyeTrackerConfig_virtual_N.json` del id nuevo con la resolución
+  de la webcam, para que el servicio no use un tamaño de fotograma distinto;
+- el combo **Virtual tracker count** ya no permite bajar de los slots que usan
+  los dispositivos configurados.
+
+Si el tracker no conecta, el aviso rojo dice ahora la causa concreta: servicio
+parado, slot inexistente o servicio todavía arrancando.
+
 ### Arreglos necesarios en el servicio
 
 - **Pipe creado tras la inicialización.** Antes el servicio creaba el named
@@ -252,6 +269,10 @@ pipe incluye la resolución.
   que el VDM leía `ProductVersion` vacío y avisaba siempre de una actualización
   a 0.27.8. Ahora el binario declara `0.27.8.0` (tomado de
   `src/psmoveprotocol/ProtocolVersion.h`) y el aviso desaparece.
+- **Test de orientación del DS4.** El config tool dibujaba siempre el modelo
+  del PS Move en *Test Orientation*, aunque el mando fuese un DualShock 4.
+  Ahora usa el mismo `drawController` que el resto de pantallas y muestra el
+  modelo DS4.
 
 Comprobación rápida con el servicio arrancado y el VDM enviando vídeo:
 
