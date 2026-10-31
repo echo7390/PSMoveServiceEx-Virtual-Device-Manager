@@ -142,8 +142,12 @@ En el VDM: **Start Page → PSMoveService location** y selecciona ese
 | Options, pulsación larga | Recentra la orientación. No abre el menú de SteamVR. |
 | LED / vibración | Los gestiona el servicio (config tool o el juego). |
 
-La pose pasa por un filtro One Euro por eje con rechazo de saltos de 4 cm para
-reducir el temblor en reposo sin añadir retardo apreciable.
+La posición pasa por un filtro One Euro por eje con rechazo de saltos de 4 cm
+para reducir el temblor en reposo sin añadir retardo apreciable. La orientación
+usa un filtro adaptativo que se guía por la velocidad angular del giroscopio
+que reporta el servicio: en reposo corta a 0,2 Hz (la barra de luz se promedia
+y apenas tiembla) y al girar el mando sube hasta 15 Hz, así que responde al
+movimiento en unas decenas de milisegundos.
 
 ---
 
