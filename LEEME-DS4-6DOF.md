@@ -149,6 +149,16 @@ que reporta el servicio: en reposo corta a 0,2 Hz (la barra de luz se promedia
 y apenas tiembla) y al girar el mando sube hasta 15 Hz, así que responde al
 movimiento en unas decenas de milisegundos.
 
+**Calibración del giroscopio (importante).** El giroscopio del DS4 tiene un
+sesgo propio de cada unidad (en este mando, unos 1,16 °/s). Antes ese sesgo no
+se restaba y la orientación se iba sola a razón de unos 60 °/min en cuanto la
+barra de luz no la corregía; ahora se resta y la deriva medida en reposo es de
+−0,4 °/min. Para que se aplique bien en tu mando, haz **una vez** la
+calibración del giroscopio en el config tool (*Controller Settings →
+Gyroscope Calibration*, con el mando quieto sobre la mesa y la barra a la
+vista de las cámaras); el servicio guarda el resultado en el JSON del mando y
+lo usa al arrancar.
+
 ---
 
 ## 4. Avisos importantes
@@ -207,6 +217,9 @@ Salida: `PSMSVirtualDeviceManager\bin\x64\Release\PSMSVirtualDeviceManager.exe`
   verificó con traza real: la barra pasa a azul, rojo y verde, y la vibración
   responde al 80 %. El fallo anterior era un `.exe` de las 21:23 anterior al
   último cambio del código del DS4.
+- Deriva medida con el mando quieto y sin seguimiento óptico (sonda propia
+  sobre la API del cliente): **−0,4 °/min** de yaw y 0,02° de temblor, frente a
+  −61 °/min antes de restar el sesgo del giroscopio.
 
 Pendiente de probar por ti en el VDM: pulsar **Install Drivers** y confirmar
 que el mensaje es el esperado, y jugar con el stick derecho y el recentrado
